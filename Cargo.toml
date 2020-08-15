@@ -5,9 +5,10 @@ authors = ["Stefan Schwarz <stefan@f2o.io>"]
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 argh = "0.1.3"
-askama = { version = "0.10", features = ["with-tide"]}
 askama_tide = "0.10"
+askama = { version = "0.10", features = ["with-tide"]}
 async-std = { version = "1.6", features = ["attributes"] }
 chrono = "0.4"
 sqlx = { version = "0.4.0-beta.1", features = ["mysql", "chrono", "macros"] }
