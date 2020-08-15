@@ -37,6 +37,7 @@ async fn main() -> Result<(), io::Error> {
 
     let mut app = tide::with_state(State { pool });
     app.at("/").get(routes::index);
+    app.at("/register").post(routes::register);
     app.at("/healthz").get(routes::healthz);
     app.at("/static").serve_dir("static/")?;
 

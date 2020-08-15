@@ -19,8 +19,8 @@
     <div class="p-2">
       <h2 class="underline">Your Devices:</h2>
       {% for device in my %}
-      <div class="grid grid-cols-3 grid-gap-1 p-1">
-	<div class="font-mono">{{ device.macaddr }}</div>
+      <div class="grid grid-cols-3 grid-gap-1">
+	<div class="font-mono">{{ device.macaddr }} {{ device.present }}</div>
 	<div>
 	  <input class="focus:shadow-outline border border-gray-300 px-2"
 		 value="{{ device.descr }}"/>
@@ -52,7 +52,7 @@
     <div class="p-2">
       <h2 class="underline">Unregistred Devices:</h2>
       {% for device in unassinged %}
-      <div class="grid grid-cols-4 grid-gap-1 p-1">
+      <div class="grid grid-cols-4 grid-gap-1 p-2">
 	<div class="font-mono">{{ device.macaddr }}</div>
 	<div class="font-mono">{{ device.ip() }}</div>
 	<div>

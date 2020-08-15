@@ -4,9 +4,10 @@ use std::net::IpAddr;
 
 type QueryAs<'q, T> =
     sqlx::query::QueryAs<'q, sqlx::MySql, T, <sqlx::MySql as HasArguments<'q>>::Arguments>;
+type Query<'q> = sqlx::query::Query<'q, sqlx::MySql, <sqlx::MySql as HasArguments<'q>>::Arguments>;
 
 #[derive(sqlx::FromRow, Debug)]
-pub struct Entry {
+pub struct Device {
     pub id: i32,
     pub macaddr: String,
     pub nickname: String,
@@ -26,7 +27,7 @@ pub enum PrivacyLevel {
     DontLog = 4,
 }
 
-impl<'q> Entry {
+impl<'q> Device {
     pub fn all() -> QueryAs<'q, Self> {
         sqlx::query_as("SELECT * FROM mac_to_nick")
     }
@@ -34,20 +35,36 @@ impl<'q> Entry {
     pub fn for_user(user: &'q str) -> QueryAs<'q, Self> {
         sqlx::query_as(
             "
-SELECT
+SELECT DISTINCT
   mtn.*,
-  IF(al.iplong != NULL, TRUE, FALSE) present
+  IF(al.iplong, TRUE, FALSE) present
 FROM
-  mac_to_nick mtn,
+  mac_to_nick mtn
+LEFT JOIN
   alive_hosts al
+ON
+  mtn.macaddr = al.macaddr
+  AND al.erfda > NOW() - INTERVAL 24 DAY
 WHERE
-  al.macaddr = mtn.macaddr
-  AND nickname = ?
-GROUP BY
-  mtn.macaddr
+  nickname = ?
+ORDER BY
+  al.erfda DESC
 ",
         )
         .bind(user)
+    }
+
+    pub fn register(mac: &'q str, user: &'q str) -> Query<'q> {
+        sqlx::query(
+            "
+INSERT
+INTO mac_to_nick
+(macaddr, nickname, descr, privacy, created)
+VALUES
+(?, ?, ?, ?, NOW())
+",
+        )
+        .bind(mac)
     }
 }
 
@@ -79,11 +96,14 @@ SELECT DISTINCT
   al.macaddr macaddr,
   al.iplong iplong
 FROM
-  alive_hosts al,
+  alive_hosts al
+NATURAL LEFT JOIN
   mac_to_nick mtn
 WHERE
   mtn.nickname IS NULL
   AND al.erfda > NOW() - INTERVAL 24 DAY
+ORDER BY
+  al.erfda DESC
 ",
         )
     }

@@ -1060,6 +1060,7 @@ dependencies = [
  "askama_tide",
  "async-std",
  "chrono",
+ "serde",
  "sqlx",
  "tide",
 ]
