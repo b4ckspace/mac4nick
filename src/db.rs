@@ -2,7 +2,6 @@ use anyhow::{anyhow, Result};
 use sqlx::database::HasArguments;
 use std::convert::TryFrom;
 use std::net::IpAddr;
-
 type QueryAs<'q, T> =
     sqlx::query::QueryAs<'q, sqlx::MySql, T, <sqlx::MySql as HasArguments<'q>>::Arguments>;
 type Query<'q> = sqlx::query::Query<'q, sqlx::MySql, <sqlx::MySql as HasArguments<'q>>::Arguments>;
@@ -45,7 +44,7 @@ SELECT DISTINCT
   IF(al.iplong, TRUE, FALSE) present
 FROM
   mac_to_nick mtn
-LEFT JOIN
+LEFT OUTER JOIN
   alive_hosts al
 ON
   mtn.macaddr = al.macaddr
@@ -95,6 +94,23 @@ WHERE
         .bind(&self.descr)
         .bind(id))
     }
+
+    pub fn delete(self) -> Result<Query<'q>> {
+        let id = match self.id {
+            Some(id) => id,
+            None => return Err(anyhow!("selected device has no id")),
+        };
+        Ok(sqlx::query(
+            "
+DELETE FROM
+  mac_to_nick
+WHERE
+  id = ?
+LIMIT 1
+",
+        )
+        .bind(id))
+    }
 }
 
 #[derive(sqlx::Type, Debug, Clone, Copy)]
@@ -108,10 +124,6 @@ pub enum PrivacyLevel {
 }
 
 impl PrivacyLevel {
-    pub fn as_u8(&self) -> u8 {
-        *self as u8
-    }
-
     pub fn selected(&self, level: &PrivacyLevel) -> &'static str {
         if *self as u8 == *level as u8 {
             "selected"
@@ -149,16 +161,19 @@ impl<'q> AliveDevice {
             "
 SELECT DISTINCT
   al.macaddr macaddr,
-  al.iplong iplong
+  al.iplong iplong,
+  mtn.nickname
 FROM
   alive_hosts al
-NATURAL LEFT JOIN
+LEFT OUTER JOIN
   mac_to_nick mtn
+ON
+  al.macaddr = mtn.macaddr
 WHERE
   mtn.nickname IS NULL
-  AND al.erfda > NOW() - INTERVAL 24 DAY
 ORDER BY
   al.erfda DESC
+;
 ",
         )
     }

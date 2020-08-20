@@ -6,7 +6,10 @@ use tide::sessions::{MemoryStore, SessionMiddleware};
 mod db;
 mod forms;
 mod routes;
+mod session;
 mod templates;
+
+pub use session::AppSession as Session;
 
 pub const USER: &str = "foosinn";
 
@@ -43,34 +46,6 @@ pub enum Level {
 
 pub type Message = (Level, String);
 
-#[derive(Default, Deserialize, Serialize)]
-pub struct AppSession {
-    messages: Vec<Message>,
-}
-
-impl AppSession {
-    pub fn add_message(mut self, message: Message) -> Self {
-        self.messages.push(message);
-        self
-    }
-
-    pub fn pop_messages(&mut self) -> Vec<Message> {
-        let mut messages: Vec<Message> = Vec::new();
-        std::mem::swap(&mut messages, &mut self.messages);
-        messages
-    }
-
-    pub fn commit(self, request: &mut Request) {
-        request.session_mut().insert("app", self).unwrap()
-    }
-}
-
-impl From<&mut Request> for AppSession {
-    fn from(request: &mut Request) -> Self {
-        request.session().get("app").unwrap_or_default()
-    }
-}
-
 pub type Request = tide::Request<State>;
 
 #[async_std::main]
@@ -89,6 +64,7 @@ async fn main() -> Result<(), io::Error> {
     app.at("/").get(routes::index);
     app.at("/register").post(routes::register);
     app.at("/update").post(routes::update);
+    app.at("/delete").post(routes::delete);
     app.at("/healthz").get(routes::healthz);
     app.at("/static").serve_dir("static/")?;
     app.listen(config.listen).await
