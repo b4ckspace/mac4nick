@@ -15,7 +15,7 @@
     <h1 class="text-xl underline text-center p-2">
       macnickenson
     </h1>
-    <div>
+    <div class="p-2">
       {% for message in messages %}
       {{ message.1 }}
       {% endfor %}
@@ -24,7 +24,7 @@
     <div class="p-2">
       <h2 class="underline">Your Devices:</h2>
       {% for device in my %}
-      <form action="/update" method="POST">
+      <form action="/change" method="POST">
       <div class="grid grid-cols-3 grid-gap-1">
 	<div class="font-mono">
 	  {{ device.macaddr }} {{ device.present }}
@@ -58,7 +58,7 @@
 		  class="rounded bg-gray-300 font-bold px-2 bg-green-500">
 	    Update
 	  </button>
-	  <button type="submit"name="action" value="update"
+	  <button type="submit"name="action" value="delete"
 		  class="rounded bg-gray-300 font-bold px-2 bg-red-500">
 	    Delete
 	  </button>
@@ -70,7 +70,7 @@
     <div class="p-2">
       <h2 class="underline">Unregistred Devices:</h2>
       {% for device in unassinged %}
-      <form action="/register" method="POST">
+      <form action="/change" method="POST">
       <div class="grid grid-cols-4 grid-gap-1 p-2">
 	<div class="font-mono">
 	  {{ device.macaddr }}
@@ -92,7 +92,7 @@
 	</div>
 	<div>
 	  <button class="rounded bg-gray-300 font-bold px-2 bg-blue-300"
-		  type="submit">
+		  name="action" value="register" type="submit">
 	    Register
 	  </button>
 	</div>

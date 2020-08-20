@@ -62,9 +62,7 @@ async fn main() -> Result<(), io::Error> {
     let mut app = tide::with_state(State { pool });
     app.with(session_store);
     app.at("/").get(routes::index);
-    app.at("/register").post(routes::register);
-    app.at("/update").post(routes::update);
-    app.at("/delete").post(routes::delete);
+    app.at("/change").post(routes::change);
     app.at("/healthz").get(routes::healthz);
     app.at("/static").serve_dir("static/")?;
     app.listen(config.listen).await

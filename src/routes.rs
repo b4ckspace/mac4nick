@@ -22,22 +22,8 @@ pub async fn index(mut request: crate::Request) -> tide::Result {
     Ok(templates::IndexTemplate::new(my, unassinged, messages).into())
 }
 
-pub async fn register(mut request: crate::Request) -> tide::Result {
-    let form: forms::RegisterForm = request.body_form().await?;
-    let message = form.handle(&request).await;
-    Session::from(&mut request).add_message(message);
-    Ok(Redirect::see_other("/").into())
-}
-
-pub async fn update(mut request: crate::Request) -> tide::Result {
-    let form: forms::UpdateForm = request.body_form().await?;
-    let message = form.handle(&request).await;
-    Session::from(&mut request).add_message(message);
-    Ok(Redirect::see_other("/").into())
-}
-
-pub async fn delete(mut request: crate::Request) -> tide::Result {
-    let form: forms::DeleteForm = request.body_form().await?;
+pub async fn change(mut request: crate::Request) -> tide::Result {
+    let form: forms::ChangeForm = request.body_form().await?;
     let message = form.handle(&request).await;
     Session::from(&mut request).add_message(message);
     Ok(Redirect::see_other("/").into())
