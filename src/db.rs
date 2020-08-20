@@ -1,5 +1,6 @@
-use chrono::{DateTime, Utc};
+use anyhow::{anyhow, Result};
 use sqlx::database::HasArguments;
+use std::convert::TryFrom;
 use std::net::IpAddr;
 
 type QueryAs<'q, T> =
@@ -8,28 +9,32 @@ type Query<'q> = sqlx::query::Query<'q, sqlx::MySql, <sqlx::MySql as HasArgument
 
 #[derive(sqlx::FromRow, Debug)]
 pub struct Device {
-    pub id: i32,
+    pub id: Option<i32>,
     pub macaddr: String,
     pub nickname: String,
     pub descr: String,
     pub privacy: PrivacyLevel,
-    pub created: DateTime<Utc>,
     pub present: bool,
 }
 
-#[derive(sqlx::Type, Debug, Clone, Copy)]
-#[repr(i8)]
-pub enum PrivacyLevel {
-    ShowUserAndDevice = 0,
-    ShowUser = 1,
-    ShowAnonymous = 2,
-    HideUser = 3,
-    DontLog = 4,
-}
-
 impl<'q> Device {
-    pub fn all() -> QueryAs<'q, Self> {
-        sqlx::query_as("SELECT * FROM mac_to_nick")
+    pub fn create(&'q self) -> Result<Query<'q>> {
+        if let Some(_) = self.id {
+            return Err(anyhow!("device has already been created"));
+        }
+        Ok(sqlx::query(
+            "
+INSERT
+INTO mac_to_nick
+(macaddr, nickname, descr, privacy, created)
+VALUES
+(?, ?, ?, ?, NOW())
+",
+        )
+        .bind(&self.macaddr)
+        .bind(&self.nickname)
+        .bind(&self.descr)
+        .bind(self.privacy))
     }
 
     pub fn for_user(user: &'q str) -> QueryAs<'q, Self> {
@@ -54,18 +59,52 @@ ORDER BY
         .bind(user)
     }
 
-    pub fn register(mac: &'q str, user: &'q str) -> Query<'q> {
-        sqlx::query(
+    pub fn for_mac(macaddr: &'q str) -> QueryAs<'q, Self> {
+        dbg!(&macaddr);
+        sqlx::query_as(
             "
-INSERT
-INTO mac_to_nick
-(macaddr, nickname, descr, privacy, created)
-VALUES
-(?, ?, ?, ?, NOW())
+SELECT DISTINCT
+  *,
+  FALSE present
+FROM
+  mac_to_nick
+WHERE
+  macaddr = ?
 ",
         )
-        .bind(mac)
+        .bind(macaddr)
     }
+
+    pub fn update(&'q self) -> Result<Query<'q>> {
+        let id = match self.id {
+            Some(id) => id,
+            None => return Err(anyhow!("selected device has no id")),
+        };
+        Ok(sqlx::query(
+            "
+UPDATE
+  mac_to_nick
+SET
+  privacy = ?,
+  descr = ?
+WHERE
+  id = ?
+",
+        )
+        .bind(self.privacy as u8)
+        .bind(&self.descr)
+        .bind(id))
+    }
+}
+
+#[derive(sqlx::Type, Debug, Clone, Copy)]
+#[repr(i8)]
+pub enum PrivacyLevel {
+    ShowUserAndDevice = 0,
+    ShowUser = 1,
+    ShowAnonymous = 2,
+    HideUser = 3,
+    DontLog = 4,
 }
 
 impl PrivacyLevel {
@@ -79,6 +118,22 @@ impl PrivacyLevel {
         } else {
             ""
         }
+    }
+}
+
+impl TryFrom<i8> for PrivacyLevel {
+    type Error = &'static str;
+
+    fn try_from(i: i8) -> Result<Self, Self::Error> {
+        let level = match i {
+            0 => PrivacyLevel::ShowUserAndDevice,
+            1 => PrivacyLevel::ShowUser,
+            2 => PrivacyLevel::ShowAnonymous,
+            3 => PrivacyLevel::HideUser,
+            4 => PrivacyLevel::DontLog,
+            _ => return Err("invalid privacy level"),
+        };
+        Ok(level)
     }
 }
 

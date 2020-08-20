@@ -255,6 +255,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-sqlx-session"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf95404b3deed3c55b22ec8dffe85e94ade9166e65c923270ddfdfe637a63b9f"
+dependencies = [
+ "async-session",
+ "async-std",
+ "sqlx 0.3.5",
+]
+
+[[package]]
 name = "async-sse"
 version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -291,6 +302,27 @@ dependencies = [
  "slab",
  "smol",
  "wasm-bindgen-futures",
+]
+
+[[package]]
+name = "async-stream"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22068c0c19514942eefcfd4daf8976ef1aad84e61539f95cd200c35202f80af5"
+dependencies = [
+ "async-stream-impl",
+ "futures-core",
+]
+
+[[package]]
+name = "async-stream-impl"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25f9db3b38af870bf7e5cc649167533b493928e50744e2c30ae350230b414670"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1058,10 +1090,12 @@ dependencies = [
  "argh",
  "askama",
  "askama_tide",
+ "async-sqlx-session",
  "async-std",
  "chrono",
+ "http-types",
  "serde",
- "sqlx",
+ "sqlx 0.4.0-beta.1",
  "tide",
 ]
 
@@ -1737,12 +1771,48 @@ dependencies = [
 
 [[package]]
 name = "sqlx"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8974cacd80085fbe49e778708d660dec6fb351604dc34c3905b26efb2803b038"
+dependencies = [
+ "sqlx-core 0.3.5",
+ "sqlx-macros 0.3.5",
+]
+
+[[package]]
+name = "sqlx"
 version = "0.4.0-beta.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8cb7b012f28c74075d6b11172ba1874f4376a255509462eaf2ef25068b31729f"
 dependencies = [
- "sqlx-core",
- "sqlx-macros",
+ "sqlx-core 0.4.0-beta.1",
+ "sqlx-macros 0.4.0-beta.1",
+]
+
+[[package]]
+name = "sqlx-core"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "88ac5a436f941c42eac509471a730df5c3c58e1450e68cd39afedbd948206273"
+dependencies = [
+ "async-native-tls",
+ "async-std",
+ "async-stream",
+ "bitflags",
+ "byteorder",
+ "chrono",
+ "crossbeam-queue",
+ "crossbeam-utils",
+ "futures-channel",
+ "futures-core",
+ "futures-util",
+ "hex",
+ "libc",
+ "log",
+ "memchr",
+ "percent-encoding",
+ "sqlformat",
+ "url",
 ]
 
 [[package]]
@@ -1793,6 +1863,23 @@ dependencies = [
 
 [[package]]
 name = "sqlx-macros"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de2ae78b783af5922d811b14665a5a3755e531c3087bb805cf24cf71f15e6780"
+dependencies = [
+ "async-std",
+ "dotenv",
+ "futures",
+ "heck",
+ "proc-macro2",
+ "quote",
+ "sqlx-core 0.3.5",
+ "syn",
+ "url",
+]
+
+[[package]]
+name = "sqlx-macros"
 version = "0.4.0-beta.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6d1bc862e5f4484965156c224f7e4c139f2d3c65b6aa0e3ae8c63461831b8da9"
@@ -1804,7 +1891,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "sha2",
- "sqlx-core",
+ "sqlx-core 0.4.0-beta.1",
  "sqlx-rt",
  "syn",
  "url",
