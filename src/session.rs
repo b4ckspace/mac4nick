@@ -2,12 +2,12 @@ use crate::Message;
 use crate::Request;
 use serde::{Deserialize, Serialize};
 
-pub struct AppSession<'r> {
+pub struct Session<'r> {
     request: &'r mut Request,
     session: Inner,
 }
 
-impl<'r> AppSession<'r> {
+impl<'r> Session<'r> {
     pub fn add_message(&mut self, message: Message) {
         self.session.add_message(message);
     }
@@ -17,14 +17,14 @@ impl<'r> AppSession<'r> {
     }
 }
 
-impl<'r> From<&'r mut Request> for AppSession<'r> {
+impl<'r> From<&'r mut Request> for Session<'r> {
     fn from(request: &'r mut Request) -> Self {
         let session = Inner::from(&*request);
         Self { request, session }
     }
 }
 
-impl<'r> Drop for AppSession<'r> {
+impl<'r> Drop for Session<'r> {
     fn drop(&mut self) {
         self.session.commit(self.request);
     }

@@ -1,7 +1,7 @@
 use crate::db;
-use crate::forms;
-use crate::templates;
-use crate::Session;
+use crate::forms::ChangeForm;
+use crate::session::Session;
+use crate::templates::IndexTemplate;
 use crate::USER;
 use tide::Redirect;
 
@@ -19,11 +19,11 @@ pub async fn index(mut request: crate::Request) -> tide::Result {
         .await
         .map_err(|err| dbg!(err))?;
     let messages = Session::from(&mut request).pop_messages();
-    Ok(templates::IndexTemplate::new(my, unassinged, messages).into())
+    Ok(IndexTemplate::new(my, unassinged, messages).into())
 }
 
 pub async fn change(mut request: crate::Request) -> tide::Result {
-    let form: forms::ChangeForm = request.body_form().await?;
+    let form: ChangeForm = request.body_form().await?;
     let message = form.handle(&request).await;
     Session::from(&mut request).add_message(message);
     Ok(Redirect::see_other("/").into())

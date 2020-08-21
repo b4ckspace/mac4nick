@@ -5,13 +5,12 @@ use std::io;
 use tide::sessions::{MemoryStore, SessionMiddleware};
 mod db;
 mod forms;
+mod middleware;
 mod routes;
 mod session;
 mod templates;
 
-pub use session::AppSession as Session;
-
-pub const USER: &str = "foosinn";
+pub const USER: &str = "hansi";
 
 /// Configuration
 #[derive(FromArgs, Debug)]
@@ -30,6 +29,10 @@ struct Config {
     /// session secret
     #[argh(option, default = "\"thisisnotasecretthisisnotasecret\".into()")]
     session_secret: String,
+
+    /// debug
+    #[argh(switch)]
+    log: bool,
 }
 
 #[derive(Clone)]
@@ -44,6 +47,16 @@ pub enum Level {
     Error,
 }
 
+impl Level {
+    fn color(&self) -> &'static str {
+        match self {
+            Level::Info => "success",
+            Level::Warn => "warning",
+            Level::Error => "danger",
+        }
+    }
+}
+
 pub type Message = (Level, String);
 
 pub type Request = tide::Request<State>;
@@ -51,6 +64,9 @@ pub type Request = tide::Request<State>;
 #[async_std::main]
 async fn main() -> Result<(), io::Error> {
     let config: Config = argh::from_env();
+    if config.log {
+        tide::log::start();
+    }
 
     let pool = MySqlPool::connect(&config.dsn)
         .await
@@ -60,6 +76,7 @@ async fn main() -> Result<(), io::Error> {
         SessionMiddleware::new(MemoryStore::new(), config.session_secret.as_bytes());
 
     let mut app = tide::with_state(State { pool });
+    app.with(middleware::ErrorHandler::default());
     app.with(session_store);
     app.at("/").get(routes::index);
     app.at("/change").post(routes::change);

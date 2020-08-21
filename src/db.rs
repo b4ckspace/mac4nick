@@ -48,9 +48,9 @@ LEFT OUTER JOIN
   alive_hosts al
 ON
   mtn.macaddr = al.macaddr
-  AND al.erfda > NOW() - INTERVAL 24 DAY
+  AND al.erfda > NOW() - INTERVAL 30 MINUTE
 WHERE
-  nickname = ?
+  nickname LIKE ?
 ORDER BY
   al.erfda DESC
 ",
