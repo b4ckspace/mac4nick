@@ -13,8 +13,9 @@ async-sqlx-session = "0.2"
 async-std = { version = "1.6", features = ["attributes"] }
 chrono = "0.4"
 http-types = "2.4"
+openssl = { version = "0.10.30", features = ["vendored"] }
 serde = "1.0"
-sqlx = { version = "0.4.0-beta.1", features = ["mysql", "chrono", "macros"] }
+sqlx = { version = "0.4.0-beta.1", features = ["mysql", "chrono"] }
 tide = "0.13"
 
 [patch.crates-io]
