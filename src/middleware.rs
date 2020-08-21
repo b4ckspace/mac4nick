@@ -21,3 +21,23 @@ impl Middleware<State> for ErrorHandler {
         "ErrorHandler"
     }
 }
+
+#[derive(Default)]
+pub struct ForwardAuth {}
+
+#[derive(Default)]
+pub struct ForwardAuthInfo {
+    pub nickname: String,
+}
+
+#[async_trait]
+impl Middleware<State> for ForwardAuth {
+    async fn handle(&self, mut request: Request, next: Next<'_, State>) -> Result {
+        let mut nickname = "Anonymous".to_string();
+        if let Some(cookie) = request.cookie("_forward_auth_name") {
+            nickname = cookie.value().to_string();
+        }
+        request.set_ext(ForwardAuthInfo { nickname });
+        Ok(next.run(request).await)
+    }
+}

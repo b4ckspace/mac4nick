@@ -59,7 +59,6 @@ ORDER BY
     }
 
     pub fn for_mac(macaddr: &'q str) -> QueryAs<'q, Self> {
-        dbg!(&macaddr);
         sqlx::query_as(
             "
 SELECT DISTINCT

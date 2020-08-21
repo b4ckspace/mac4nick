@@ -1,7 +1,7 @@
 use crate::db;
+use crate::middleware::ForwardAuthInfo;
 use crate::Level;
 use crate::Message;
-use crate::USER;
 use serde::Deserialize;
 use std::convert::TryFrom;
 
@@ -31,6 +31,8 @@ impl ChangeForm {
     }
 
     pub async fn register(self, request: &crate::Request) -> Message {
+        let forward_auth: &ForwardAuthInfo = request.ext().unwrap();
+        let nickname = forward_auth.nickname.clone();
         let privacy = match db::PrivacyLevel::try_from(self.privacy) {
             Ok(privacy) => privacy,
             Err(_) => return (Level::Error, "unable to parse privacy level".to_string()),
@@ -38,7 +40,7 @@ impl ChangeForm {
         let dbresult = db::Device {
             id: None,
             macaddr: self.macaddr,
-            nickname: USER.to_string(),
+            nickname: nickname.clone(),
             descr: self.descr.clone(),
             privacy,
             present: false,
@@ -51,7 +53,7 @@ impl ChangeForm {
         return match dbresult {
             Ok(_) => (
                 Level::Info,
-                format!("assinged device \"{}\" to {}", self.descr, USER),
+                format!("assinged device \"{}\" to {}", &self.descr, &nickname),
             ),
             Err(_) => (Level::Error, "unable to create device".to_string()),
         };

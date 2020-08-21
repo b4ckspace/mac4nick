@@ -10,8 +10,6 @@ mod routes;
 mod session;
 mod templates;
 
-pub const USER: &str = "hansi";
-
 /// Configuration
 #[derive(FromArgs, Debug)]
 struct Config {
@@ -77,6 +75,7 @@ async fn main() -> Result<(), io::Error> {
 
     let mut app = tide::with_state(State { pool });
     app.with(middleware::ErrorHandler::default());
+    app.with(middleware::ForwardAuth::default());
     app.with(session_store);
     app.at("/").get(routes::index);
     app.at("/change").post(routes::change);
