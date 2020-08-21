@@ -83,7 +83,7 @@ impl ChangeForm {
             .execute(&request.state().pool)
             .await
         {
-            Ok(_) => (Level::Info, "updated device".to_string()),
+            Ok(_) => (Level::Info, format!("updated device \"{}\"", device.descr)),
             Err(_) => (Level::Error, "unable to update device".to_string()),
         }
     }
@@ -101,13 +101,17 @@ impl ChangeForm {
                 )
             }
         };
+        let descr = device.descr.clone();
         match device
             .delete()
             .unwrap()
             .execute(&request.state().pool)
             .await
         {
-            Ok(_) => (Level::Info, "delete device".to_string()),
+            Ok(_) => (
+                Level::Info,
+                format!("device \"{}\" has been deleted", descr),
+            ),
             Err(_) => (Level::Error, "unable to delete device".to_string()),
         }
     }

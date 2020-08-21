@@ -3,40 +3,53 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css">
   <title>macnickenson</title>
 </head>
 
 <body>
-
+  <section class="section">
   <div class="container">
-    <h1>macnickenson</h1>
+    <section class="hero is-small is-primary is-bold box">
+      <div class="hero-body">
+	<div class="container">
+	  <h1 class="title">macnickenson</h1>
+	</div>
+      </div>
+    </section>
 
     {% for message in messages %}
-    <div class="alert alert-{{ message.0.color() }}">{{ message.1 }}</div>
+    <div class="notification is-{{ message.0.color() }}">
+      <button class="delete"
+	      ></button>
+      {{ message.1 }}
+    </div>
     {% endfor %}
 
-    <div class="mt-5">
-      <h2>Your ({{ nickname }}) Devices:</h2>
-      <table class="table">
+    <div class="box">
+      <h2 class="title is-4">{{ nickname }}'s Devices:</h2>
+      <table class="table is-striped is-fullwidth has-mobile-cards">
       <thead><tr>
-        <th scope="col">Mac-Address</th>
+        <th scope="col">MAC-Address</th>
         <th scope="col">Description</th>
         <th scope="col">Privacy</th>
-        <th scope="col">Commands</th>
+        <th scope="col">Actions</th>
       </tr></thead>
       <tbody>
       {% for device in my %}
 	<tr><form action="/change" method="POST">
-	  <td>
-	    {{ device.macaddr }}
+	  <td data-label="MAC">
+	    <span class="is-family-code">{{ device.macaddr }}</span>
 	    {% if device.present %}
-	    <span class="badge badge-success">on</span>
+	    <span class="tag is-success">on</span>
 	    {% endif %}
 	    <input type="hidden" name="macaddr" value="{{ device.macaddr }}" />
 	  </td>
-	  <td><input name="descr" required value="{{ device.descr }}" /></td>
-	  <td>
+	  <td data-label="Descr">
+	    <input name="descr" required value="{{ device.descr }}" />
+	  </td>
+	  <td data-label="Privacy">
 	    <select name="privacy">
               <option value="0"
 	    	    {{ device.privacy.selected(crate::db::PrivacyLevel::ShowUserAndDevice) }}
@@ -55,12 +68,12 @@
 	    	    >Dont Log</option>
 	    </select>
 	  </td>
-	  <td>
-	    <div class="btn-group">
+	  <td data-label="Actions">
+	    <div class="buttons has-addons">
 	    <button type="submit" name="action" value="update"
-		    class="btn btn-primary">Update</button>
+		    class="button is-info is-small">Update</button>
 	    <button type="submit" name="action" value="delete"
-		    class="btn btn-danger">Delete</button>
+		    class="button is-danger is-small">Delete</button>
 	    </div>
 	  </td>
 	</form></tr>
@@ -68,28 +81,28 @@
       </tbody>
       </table>
     </div>
-    <div class="mt-5">
-      <h2>Unregistred Devices:</h2>
-      <table class="table">
+    <div class="box">
+      <h2 class="title is-4">Unregistred Devices:</h2>
+      <table class="table is-striped is-fullwidth has-mobile-cards">
       <thead><tr>
 	  <th>MAC-Address</th>
 	  <th>IP-Address</th>
 	  <th>Description</th>
 	  <th>Privacy</th>
-	  <th>Commands</th>
+	  <th>Actions</th>
       </tr></thead>
       <tbody>
       {% for device in unassinged %}
 	<tr><form action="/change" method="POST">
-	  <td>
-	    {{ device.macaddr }}
+	  <td data-label="MAC">
+	    <span class="is-family-code">{{ device.macaddr }}</span>
 	    <input type="hidden" name="macaddr" value="{{ device.macaddr }}" />
 	  </td>
-	  <td>{{ device.ip() }}</td>
-	  <td>
+	  <td data-label="IP-Address">{{ device.ip() }}</td>
+	  <td data-label="Descr">
 	    <input placeholder="awesome new device" required name="descr" />
 	  </td>
-	  <td>
+	  <td data-label="Privacy">
 	    <select name="privacy">
               <option value="0">Show User and Device</option>
               <option value="1">Show User</option>
@@ -98,17 +111,48 @@
               <option value="4">Dont Log</option>
 	    </select>
 	  </td>
-	  <td>
+	  <td data-label="Actions">
 	    <button name="action" value="register" type="submit"
-		    class="btn btn-success">Register</button>
+		    class="button is-success is-small">Register</button>
 	  </td>
 	</form></tr>
       {% endfor %}
       </table>
     </div>
-    <div>
-      footer
-    </div>
   </div>
+  </section>
 </body>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    (document.querySelectorAll('.notification .delete') || []).forEach(($delete) => {
+      $notification = $delete.parentNode;
+  
+      $delete.addEventListener('click', () => {
+        $notification.parentNode.removeChild($notification);
+      });
+    });
+  });
+  setTimeout(() => {
+    (document.querySelectorAll('.notification .delete') || []).forEach(($delete) => {
+      $notification = $delete.parentNode;
+      $notification.parentNode.removeChild($notification);
+    });
+  }, 5000)
+</script>
+<style>
+@media screen and (max-width: 768px) {
+  .table.has-mobile-cards thead { display: none }
+  .table.has-mobile-cards tfoot th { border: 0; display: inherit }
+  .table.has-mobile-cards tr { box-shadow: 0 2px 3px hsla(0,0%,4%,.1),0 0 0 1px hsla(0,0%,4%,.1); max-width: 100%; position: relative; display: block }
+  .table.has-mobile-cards tr td { border: 0; display: inherit }
+  .table.has-mobile-cards tr td:last-child { border-bottom: 0 }
+  .table.has-mobile-cards tr:not(:last-child) { margin-bottom: 1rem }
+  .table.has-mobile-cards tr:not([class*=is-]) { background: inherit }
+  .table.has-mobile-cards tr:not([class*=is-]):hover { background-color: inherit }
+  .table.has-mobile-cards tr.detail { margin-top: -1rem }
+  .table.has-mobile-cards tr:not(.detail):not(.is-empty):not(.table-footer) td { display: -ms-flexbox; display: flex; width: auto; -ms-flex-pack: end; justify-content: flex-end; text-align: right; border-bottom: 1px solid #f5f5f5 }
+  .table.has-mobile-cards tr:not(.detail):not(.is-empty):not(.table-footer) td:before { content: attr(data-label); font-weight: 600; margin-right: auto; padding-right: .5em; text-align: left }
+}
+
+</style>
 </html>
