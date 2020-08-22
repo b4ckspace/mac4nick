@@ -1,2 +1,4 @@
 /target
 .log
+/static/css
+/static/node_modules
