@@ -1,7 +1,7 @@
+use anyhow::{Context, Result};
 use argh::FromArgs;
 use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
-use std::io;
 use tide::sessions::{MemoryStore, SessionMiddleware};
 mod db;
 mod forms;
@@ -60,7 +60,7 @@ pub type Message = (Level, String);
 pub type Request = tide::Request<State>;
 
 #[async_std::main]
-async fn main() -> Result<(), io::Error> {
+async fn main() -> Result<()> {
     let config: Config = argh::from_env();
     if config.log {
         tide::log::start();
@@ -68,7 +68,7 @@ async fn main() -> Result<(), io::Error> {
 
     let pool = MySqlPool::connect(&config.dsn)
         .await
-        .map_err(|err| io::Error::new(io::ErrorKind::Other, format!("{:?}", err)))?;
+        .context("unable to open database connection")?;
 
     let session_store =
         SessionMiddleware::new(MemoryStore::new(), config.session_secret.as_bytes());
@@ -80,6 +80,8 @@ async fn main() -> Result<(), io::Error> {
     app.at("/").get(routes::index);
     app.at("/change").post(routes::change);
     app.at("/healthz").get(routes::healthz);
-    app.at("/static").serve_dir("static/")?;
-    app.listen(config.listen).await
+    app.at("/static")
+        .serve_dir("static/")
+        .context("unable to open static files")?;
+    app.listen(config.listen).await.context("unable to listen")
 }
