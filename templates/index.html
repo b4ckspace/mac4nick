@@ -13,16 +13,17 @@
   <div class="container">
     <section class="hero is-small is-primary is-bold box">
       <div class="hero-body">
-	<div class="container">
-	  <h1 class="title">macnickenson</h1>
-	</div>
+        <div class="container">
+          <h1 class="title">mac4nick</h1>
+          <p class="subtitle is-5">grant your nickname a few mac addresses</p>
+        </div>
       </div>
     </section>
 
     {% for message in messages %}
     <div class="notification is-{{ message.0.color() }}">
       <button class="delete"
-	      ></button>
+              ></button>
       {{ message.1 }}
     </div>
     {% endfor %}
@@ -38,45 +39,54 @@
       </tr></thead>
       <tbody>
       {% for device in my %}
-	<tr><form action="/change" method="POST">
-	  <td data-label="MAC">
-	    <span class="is-family-code">{{ device.macaddr }}</span>
-	    {% if device.present %}
-	    <span class="tag is-success">on</span>
-	    {% endif %}
-	    <input type="hidden" name="macaddr" value="{{ device.macaddr }}" />
-	  </td>
-	  <td data-label="Descr">
-	    <input name="descr" required value="{{ device.descr }}" />
-	  </td>
-	  <td data-label="Privacy">
-	    <select name="privacy">
+        <tr><form action="/change" method="POST">
+          <td data-label="MAC">
+            <span class="is-family-code">{{ device.macaddr }}</span>
+            {% if device.present %}
+	    <span class="has-text-success icon is-small">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                   viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                   class="feather feather-rss">
+                <path d="M4 11a9 9 0 0 1 9 9"></path>
+                <path d="M4 4a16 16 0 0 1 16 16"></path>
+                <circle cx="5" cy="19" r="1"></circle>
+              </svg>
+	    </span>
+            {% endif %}
+            <input type="hidden" name="macaddr" value="{{ device.macaddr }}" />
+          </td>
+          <td data-label="Descr">
+            <input name="descr" required value="{{ device.descr }}" />
+          </td>
+          <td data-label="Privacy">
+            <select name="privacy">
               <option value="0"
-	    	    {{ device.privacy.selected(crate::db::PrivacyLevel::ShowUserAndDevice) }}
-	    	    >Show User and Device</option>
+                        {{ device.privacy.selected(crate::db::PrivacyLevel::ShowUserAndDevice) }}
+                        >Show User and Device</option>
               <option value="1"
-	    	    {{ device.privacy.selected(crate::db::PrivacyLevel::ShowUser) }}
-	    	    >Show User</option>
+                        {{ device.privacy.selected(crate::db::PrivacyLevel::ShowUser) }}
+                        >Show User</option>
               <option value="2"
-	    	    {{ device.privacy.selected(crate::db::PrivacyLevel::ShowAnonymous) }}
-	    	    >Show Anonymous</option>
+                        {{ device.privacy.selected(crate::db::PrivacyLevel::ShowAnonymous) }}
+                        >Show Anonymous</option>
               <option value="3"
-	    	    {{ device.privacy.selected(crate::db::PrivacyLevel::HideUser) }}
-	    	    >Hide User</option>
+                        {{ device.privacy.selected(crate::db::PrivacyLevel::HideUser) }}
+                        >Hide User</option>
               <option value="4"
-	    	    {{ device.privacy.selected(crate::db::PrivacyLevel::DontLog) }}
-	    	    >Dont Log</option>
-	    </select>
-	  </td>
-	  <td data-label="Actions">
-	    <div class="buttons has-addons">
-	    <button type="submit" name="action" value="update"
-		    class="button is-info is-small">Update</button>
-	    <button type="submit" name="action" value="delete"
-		    class="button is-danger is-small">Delete</button>
-	    </div>
-	  </td>
-	</form></tr>
+                        {{ device.privacy.selected(crate::db::PrivacyLevel::DontLog) }}
+                        >Dont Log</option>
+            </select>
+          </td>
+          <td data-label="Actions">
+            <div class="buttons has-addons">
+            <button type="submit" name="action" value="update"
+                    class="button is-info is-small">Update</button>
+            <button type="submit" name="action" value="delete"
+                    class="button is-danger is-small">Delete</button>
+            </div>
+          </td>
+        </form></tr>
       {% endfor %}
       </tbody>
       </table>
@@ -85,37 +95,37 @@
       <h2 class="title is-4">Unregistred Devices:</h2>
       <table class="table is-striped is-fullwidth has-mobile-cards">
       <thead><tr>
-	  <th>MAC-Address</th>
-	  <th>IP-Address</th>
-	  <th>Description</th>
-	  <th>Privacy</th>
-	  <th>Actions</th>
+          <th>MAC-Address</th>
+          <th>IP-Address</th>
+          <th>Description</th>
+          <th>Privacy</th>
+          <th>Actions</th>
       </tr></thead>
       <tbody>
       {% for device in unassinged %}
-	<tr><form action="/change" method="POST">
-	  <td data-label="MAC">
-	    <span class="is-family-code">{{ device.macaddr }}</span>
-	    <input type="hidden" name="macaddr" value="{{ device.macaddr }}" />
-	  </td>
-	  <td data-label="IP-Address">{{ device.ip() }}</td>
-	  <td data-label="Descr">
-	    <input placeholder="awesome new device" required name="descr" />
-	  </td>
-	  <td data-label="Privacy">
-	    <select name="privacy">
+        <tr><form action="/change" method="POST">
+          <td data-label="MAC">
+            <span class="is-family-code">{{ device.macaddr }}</span>
+            <input type="hidden" name="macaddr" value="{{ device.macaddr }}" />
+          </td>
+          <td data-label="IP-Address">{{ device.ip() }}</td>
+          <td data-label="Descr">
+            <input placeholder="awesome new device" required name="descr" />
+          </td>
+          <td data-label="Privacy">
+            <select name="privacy">
               <option value="0">Show User and Device</option>
               <option value="1">Show User</option>
               <option value="2" selected>Show Anonymous</option>
               <option value="3">Hide User</option>
               <option value="4">Dont Log</option>
-	    </select>
-	  </td>
-	  <td data-label="Actions">
-	    <button name="action" value="register" type="submit"
-		    class="button is-success is-small">Register</button>
-	  </td>
-	</form></tr>
+            </select>
+          </td>
+          <td data-label="Actions">
+            <button name="action" value="register" type="submit"
+                    class="button is-success is-small">Register</button>
+          </td>
+        </form></tr>
       {% endfor %}
       </table>
     </div>
