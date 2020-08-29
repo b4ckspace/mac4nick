@@ -170,6 +170,7 @@ ON
   al.macaddr = mtn.macaddr
 WHERE
   mtn.nickname IS NULL
+  AND al.erfda > NOW() - INTERVAL 30 MINUTE
 ORDER BY
   al.erfda DESC
 ;
