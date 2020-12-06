@@ -7,17 +7,17 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 argh = "0.1"
-askama_tide = "0.10"
+askama_tide = "0.12"
 askama = { version = "0.10", features = ["with-tide"]}
 async-sqlx-session = "0.2"
-async-std = { version = "1.6", features = ["attributes"] }
+async-std = { version = "1.7", features = ["attributes"] }
 chrono = "0.4"
-http-types = "2.4"
-openssl = { version = "0.10.30", features = ["vendored"] }
+http-types = "2.8"
+openssl = { version = "0.10", features = ["vendored"] }
 serde = "1.0"
-sqlx = { version = "0.4.0-beta.1", features = ["mysql", "chrono"] }
-tide = "0.13"
+sqlx = { version = "0.4", features = ["mysql", "chrono", "runtime-async-std-native-tls"] }
+tide = "0.15"
 
-[patch.crates-io]
-askama_tide = { git = "https://github.com/jbr/askama", branch = "update-tide-to-0.13" }
-askama = { git = "https://github.com/jbr/askama", branch = "update-tide-to-0.13" }
+#[patch.crates-io]
+#askama_tide = { git = "https://github.com/jbr/askama", branch = "update-tide-to-0.13" }
+#askama = { git = "https://github.com/jbr/askama", branch = "update-tide-to-0.13" }
