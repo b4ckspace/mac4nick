@@ -22,8 +22,7 @@
 
     {% for message in messages %}
     <div class="notification is-{{ message.0.color() }}">
-      <button class="delete"
-              ></button>
+      <button class="delete"></button>
       {{ message.1 }}
     </div>
     {% endfor %}
@@ -43,7 +42,7 @@
           <td data-label="MAC">
             <span class="is-family-code">{{ device.macaddr }}</span>
             {% if device.present %}
-	    <span class="has-text-success icon is-small">
+            <span class="has-text-success icon is-small">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
                    viewBox="0 0 24 24" fill="none" stroke="currentColor"
                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -52,7 +51,7 @@
                 <path d="M4 4a16 16 0 0 1 16 16"></path>
                 <circle cx="5" cy="19" r="1"></circle>
               </svg>
-	    </span>
+            </span>
             {% endif %}
             <input type="hidden" name="macaddr" value="{{ device.macaddr }}" />
           </td>
