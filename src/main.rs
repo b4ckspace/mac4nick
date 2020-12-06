@@ -31,6 +31,10 @@ struct Config {
     /// debug
     #[argh(switch)]
     log: bool,
+
+    /// default nickname
+    #[argh(option, default = "\"Anonymous\".into()")]
+    default_nickname: String,
 }
 
 #[derive(Clone)]
@@ -69,19 +73,21 @@ async fn main() -> Result<()> {
     let pool = MySqlPool::connect(&config.dsn)
         .await
         .context("unable to open database connection")?;
+    let mut app = tide::with_state(State { pool });
 
+    app.with(middleware::ErrorHandler::default());
+    let forward_auth = middleware::ForwardAuth::new(&config.default_nickname);
+    app.with(forward_auth);
     let session_store =
         SessionMiddleware::new(MemoryStore::new(), config.session_secret.as_bytes());
-
-    let mut app = tide::with_state(State { pool });
-    app.with(middleware::ErrorHandler::default());
-    app.with(middleware::ForwardAuth::default());
     app.with(session_store);
+
     app.at("/").get(routes::index);
     app.at("/change").post(routes::change);
     app.at("/healthz").get(routes::healthz);
     app.at("/static")
         .serve_dir("static/")
         .context("unable to open static files")?;
+
     app.listen(config.listen).await.context("unable to listen")
 }
