@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use argh::FromArgs;
+use openssl_probe;
 use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
 use tide::sessions::{MemoryStore, SessionMiddleware};
@@ -65,6 +66,7 @@ pub type Request = tide::Request<State>;
 
 #[async_std::main]
 async fn main() -> Result<()> {
+    openssl_probe::init_ssl_cert_env_vars();
     let config: Config = argh::from_env();
     if config.log {
         tide::log::start();
