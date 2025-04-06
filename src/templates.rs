@@ -1,5 +1,5 @@
 use crate::db;
-use crate::Message;
+use crate::AppMessage;
 use askama::Template;
 
 #[derive(Template, Default)]
@@ -8,7 +8,7 @@ pub struct IndexTemplate {
     nickname: String,
     my: Vec<db::Device>,
     unassinged: Vec<db::AliveDevice>,
-    messages: Vec<Message>,
+    messages: Vec<AppMessage>,
 }
 
 impl IndexTemplate {
@@ -16,7 +16,7 @@ impl IndexTemplate {
         nickname: String,
         my: Vec<db::Device>,
         unassinged: Vec<db::AliveDevice>,
-        messages: Vec<Message>,
+        messages: Vec<AppMessage>,
     ) -> Self {
         Self {
             nickname,

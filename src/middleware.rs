@@ -1,56 +1,25 @@
-use crate::Request;
-use crate::State;
-use tide::log;
-use tide::utils::async_trait;
-use tide::{Middleware, Next, Redirect, Result};
+use axum::{
+    extract::FromRequestParts,
+    http::{StatusCode, request::Parts},
+};
 
-#[derive(Default)]
-pub struct ErrorHandler {}
+pub(crate) struct ForwardAuth(pub String);
 
-#[async_trait]
-impl Middleware<State> for ErrorHandler {
-    async fn handle(&self, request: Request, next: Next<'_, State>) -> Result {
-        let mut resp = next.run(request).await;
-        if let Some(err) = resp.take_error() {
-            log::error!("middleware caught error", { error: err.to_string() });
-            return Ok(Redirect::see_other("/").into());
-        }
-        Ok(resp)
-    }
+impl<S> FromRequestParts<S> for ForwardAuth
+where
+    S: Send + Sync,
+{
+    type Rejection = StatusCode;
 
-    fn name(&self) -> &str {
-        "ErrorHandler"
-    }
-}
-
-pub struct ForwardAuth {
-    default_nickname: String,
-}
-
-impl ForwardAuth {
-    pub fn new(default_nickname: &str) -> Self {
-        ForwardAuth {
-            default_nickname: default_nickname.to_string(),
-        }
-    }
-}
-
-pub struct ForwardAuthInfo {
-    pub nickname: String,
-}
-
-#[async_trait]
-impl Middleware<State> for ForwardAuth {
-    async fn handle(&self, mut request: Request, next: Next<'_, State>) -> Result {
-        let nickname = match request.cookie("_forward_auth_name") {
-            Some(cookie) => cookie.value().to_string(),
-            None => self.default_nickname.clone(),
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        if let Some(nickname) = parts
+            .headers
+            .get("X-Remote-User")
+            .and_then(|value| value.to_str().ok())
+        {
+            return Ok(Self(nickname.to_owned()));
         };
-        request.set_ext(ForwardAuthInfo { nickname });
-        Ok(next.run(request).await)
-    }
 
-    fn name(&self) -> &str {
-        "ForwardAuth"
+        Err(StatusCode::UNAUTHORIZED)
     }
 }

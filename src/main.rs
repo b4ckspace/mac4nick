@@ -1,14 +1,23 @@
 use anyhow::{Context, Result};
 use argh::FromArgs;
+use axum::extract::State;
+use axum::{
+    Router,
+    middleware::from_extractor,
+    routing::{get, post},
+};
+use axum_messages::{Level, MessagesManagerLayer};
 use openssl_probe;
-use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
-use tide::sessions::{MemoryStore, SessionMiddleware};
+use tower_http::{services::ServeDir, trace::TraceLayer};
+use tower_sessions::{MemoryStore, SessionManagerLayer};
+
 mod db;
 mod forms;
+mod helpers;
 mod middleware;
 mod routes;
-mod session;
+mod scan;
 mod templates;
 
 /// Configuration
@@ -25,71 +34,65 @@ struct Config {
     )]
     dsn: String,
 
-    /// session secret
-    #[argh(option, default = "\"thisisnotasecretthisisnotasecret\".into()")]
-    session_secret: String,
+    /// unifi console hostname
+    #[argh(option)]
+    unifi_hostname: Option<String>,
 
-    /// debug
+    /// unifi console username
+    #[argh(option)]
+    unifi_username: Option<String>,
+
+    /// unifi console password
+    #[argh(option)]
+    unifi_password: Option<String>,
+
+    /// scan
     #[argh(switch)]
-    log: bool,
-
-    /// default nickname
-    #[argh(option, default = "\"Anonymous\".into()")]
-    default_nickname: String,
+    scan: bool,
 }
 
 #[derive(Clone)]
-pub struct State {
+pub struct AppState {
     pool: MySqlPool,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub enum Level {
-    Info,
-    Warn,
-    Error,
-}
+type AxumAppState = State<AppState>;
 
-impl Level {
-    fn color(&self) -> &'static str {
-        match self {
-            Level::Info => "success",
-            Level::Warn => "warning",
-            Level::Error => "danger",
-        }
-    }
-}
+type AppMessage = (Level, String);
 
-pub type Message = (Level, String);
-
-pub type Request = tide::Request<State>;
-
-#[async_std::main]
+#[tokio::main]
 async fn main() -> Result<()> {
     openssl_probe::init_ssl_cert_env_vars();
+
     let config: Config = argh::from_env();
-    if config.log {
-        tide::log::start();
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_env("RUST_LOG"))
+        .init();
+
+    if config.scan {
+        return scan::scan(config).await;
     }
 
     let pool = MySqlPool::connect(&config.dsn)
         .await
         .context("unable to open database connection")?;
-    let mut app = tide::with_state(State { pool });
 
-    app.with(middleware::ErrorHandler::default());
-    let forward_auth = middleware::ForwardAuth::new(&config.default_nickname);
-    app.with(forward_auth);
-    let session_store =
-        SessionMiddleware::new(MemoryStore::new(), config.session_secret.as_bytes());
-    app.with(session_store);
+    let session_store = MemoryStore::default();
+    let session_layer = SessionManagerLayer::new(session_store).with_secure(false);
 
-    app.at("/").get(routes::index);
-    app.at("/change").post(routes::change);
-    app.at("/healthz").get(routes::healthz);
-    app.at("/static")
-        .serve_dir("static/")
-        .context("unable to open static files")?;
+    let app_state = AppState { pool };
+    let app = Router::new()
+        .route("/healthz", get(routes::healthz))
+        .route("/", get(routes::index))
+        .route("/change", post(routes::change))
+        .nest_service("/static", ServeDir::new("static"))
+        .with_state(app_state)
+        .layer(MessagesManagerLayer)
+        .layer(session_layer)
+        .layer(from_extractor::<middleware::ForwardAuth>())
+        .layer(TraceLayer::new_for_http());
 
-    app.listen(config.listen).await.context("unable to listen")
+    let listener = tokio::net::TcpListener::bind(config.listen).await?;
+    axum::serve(listener, app).await?;
+    Ok(())
 }

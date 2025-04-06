@@ -2,23 +2,23 @@
 name = "mac4nick"
 version = "0.1.0"
 authors = ["Stefan Schwarz <stefan@f2o.io>"]
-edition = "2018"
+edition = "2024"
 
 [dependencies]
 anyhow = "1.0"
 argh = "0.1"
-askama_tide = "0.12"
-askama = { version = "0.10", features = ["with-tide"]}
-async-sqlx-session = "0.2"
-async-std = { version = "1.7", features = ["attributes"] }
+askama = { version = "0.13" }
+axum-messages = "0.8"
+axum = { version = "0.8", features = ["macros"] }
 chrono = "0.4"
-http-types = "2.8"
-openssl = { version = "0.10", features = ["vendored"] }
+http = "1"
 openssl-probe = "0.1.4"
+openssl = { version = "0.10", features = ["vendored"] }
+reqwest = { version = "0.12", features = ["json", "cookies"] }
 serde = "1.0"
-sqlx = { version = "0.4", features = ["mysql", "chrono", "runtime-async-std-native-tls"] }
-tide = "0.15"
-
-#[patch.crates-io]
-#askama_tide = { git = "https://github.com/jbr/askama", branch = "update-tide-to-0.13" }
-#askama = { git = "https://github.com/jbr/askama", branch = "update-tide-to-0.13" }
+sqlx = { version = "0.8", features = ["mysql", "chrono", "runtime-tokio"] }
+tokio = { version = "1.11", features = ["full"] }
+tower-http = { version = "0.6", features = ["fs", "trace"] }
+tower-sessions = "0.14"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

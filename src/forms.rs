@@ -1,11 +1,11 @@
+use crate::AppMessage;
+use crate::AppState;
 use crate::db;
-use crate::middleware::ForwardAuthInfo;
-use crate::Level;
-use crate::Message;
+use axum_messages::Level;
 use serde::Deserialize;
 use std::convert::TryFrom;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "lowercase")]
 enum Action {
     Register,
@@ -13,7 +13,7 @@ enum Action {
     Delete,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct ChangeForm {
     action: Action,
     macaddr: String,
@@ -22,17 +22,16 @@ pub struct ChangeForm {
 }
 
 impl ChangeForm {
-    pub async fn handle(self, request: &crate::Request) -> Message {
+    pub async fn handle(self, state: &AppState) -> AppMessage {
         match self.action {
-            Action::Register => self.register(request).await,
-            Action::Update => self.update(request).await,
-            Action::Delete => self.delete(request).await,
+            Action::Register => self.register(state).await,
+            Action::Update => self.update(state).await,
+            Action::Delete => self.delete(state).await,
         }
     }
 
-    pub async fn register(self, request: &crate::Request) -> Message {
-        let forward_auth: &ForwardAuthInfo = request.ext().unwrap();
-        let nickname = forward_auth.nickname.clone();
+    pub async fn register(self, state: &AppState) -> AppMessage {
+        let nickname = "foosinn";
         let privacy = match db::PrivacyLevel::try_from(self.privacy) {
             Ok(privacy) => privacy,
             Err(_) => return (Level::Error, "unable to parse privacy level".to_string()),
@@ -40,16 +39,13 @@ impl ChangeForm {
         let dbresult = db::Device {
             id: None,
             macaddr: self.macaddr,
-            nickname: nickname.clone(),
+            nickname: nickname.to_string(),
             descr: self.descr.clone(),
             privacy,
             present: false,
-        };
-        let dbresult = dbresult
-            .create()
-            .unwrap()
-            .execute(&request.state().pool)
-            .await;
+        }
+        .create(state)
+        .await;
         return match dbresult {
             Ok(_) => (
                 Level::Info,
@@ -59,17 +55,14 @@ impl ChangeForm {
         };
     }
 
-    pub async fn update(self, request: &crate::Request) -> Message {
-        let mut device = match db::Device::for_mac(&self.macaddr)
-            .fetch_one(&request.state().pool)
-            .await
-        {
+    pub async fn update(self, state: &AppState) -> AppMessage {
+        let mut device = match db::Device::for_mac(state, &self.macaddr).await {
             Ok(device) => device,
             Err(_) => {
                 return (
                     Level::Error,
                     "unable to load device from database".to_string(),
-                )
+                );
             }
         };
         device.privacy = match db::PrivacyLevel::try_from(self.privacy) {
@@ -77,37 +70,24 @@ impl ChangeForm {
             Err(_) => return (Level::Error, "unable to parse privacy level".to_string()),
         };
         device.descr = self.descr;
-        match device
-            .update()
-            .unwrap()
-            .execute(&request.state().pool)
-            .await
-        {
-            Ok(_) => (Level::Info, format!("updated device \"{}\"", device.descr)),
+        match device.update(state).await {
+            Ok(device) => (Level::Info, format!("updated device \"{}\"", device.descr)),
             Err(_) => (Level::Error, "unable to update device".to_string()),
         }
     }
 
-    pub async fn delete(self, request: &crate::Request) -> Message {
-        let device = match db::Device::for_mac(&self.macaddr)
-            .fetch_one(&request.state().pool)
-            .await
-        {
+    pub async fn delete(self, state: &AppState) -> AppMessage {
+        let device = match db::Device::for_mac(state, &self.macaddr).await {
             Ok(device) => device,
             Err(_) => {
                 return (
                     Level::Error,
                     "unable to load device from database".to_string(),
-                )
+                );
             }
         };
         let descr = device.descr.clone();
-        match device
-            .delete()
-            .unwrap()
-            .execute(&request.state().pool)
-            .await
-        {
+        match device.delete(state).await {
             Ok(_) => (
                 Level::Info,
                 format!("device \"{}\" has been deleted", descr),
