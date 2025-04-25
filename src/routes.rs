@@ -21,10 +21,10 @@ pub async fn index(
     messages: Messages,
     ForwardAuth(nickname): ForwardAuth,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
-    let my = db::Device::for_user(&state, &nickname)
+    let my = db::Device::for_user(&state.pool, &nickname)
         .await
         .context("unable to fetch user from db")?;
-    let unassinged = db::AliveDevice::unassinged(&state)
+    let unassinged = db::AliveDevice::unassinged(&state.pool)
         .await
         .context("unable to find device")?;
     Ok::<Html<String>, helpers::AppError>(Html(

@@ -3,7 +3,7 @@ use sqlx::MySqlPool;
 use std::convert::TryFrom;
 use std::net::Ipv4Addr;
 
-#[derive(sqlx::FromRow, Debug)]
+#[derive(sqlx::FromRow, Debug, PartialEq, Eq, Hash)]
 pub struct Device {
     pub id: Option<i32>,
     pub macaddr: String,
@@ -14,7 +14,7 @@ pub struct Device {
 }
 
 impl Device {
-    pub async fn create(self, state: &crate::AppState) -> Result<()> {
+    pub async fn create(self, pool: &MySqlPool) -> Result<()> {
         if let Some(_) = self.id {
             return Err(anyhow!("device has already been created"));
         }
@@ -31,13 +31,13 @@ VALUES
         .bind(&self.nickname)
         .bind(&self.descr)
         .bind(self.privacy)
-        .execute(&state.pool)
+        .execute(pool)
         .await
         .context("unable to create device entry")
         .and(Ok(()))
     }
 
-    pub async fn for_user(state: &crate::AppState, user: &str) -> Result<Vec<Device>> {
+    pub async fn for_user(pool: &MySqlPool, user: &str) -> Result<Vec<Device>> {
         sqlx::query_as(
             "
 SELECT DISTINCT
@@ -57,12 +57,12 @@ ORDER BY
 ",
         )
         .bind(user)
-        .fetch_all(&state.pool)
+        .fetch_all(pool)
         .await
         .context("unable to select by user")
     }
 
-    pub async fn for_mac(state: &crate::AppState, macaddr: &str) -> Result<Device> {
+    pub async fn for_mac(pool: &MySqlPool, macaddr: &str) -> Result<Device> {
         sqlx::query_as(
             "
 SELECT DISTINCT
@@ -75,12 +75,12 @@ WHERE
 ",
         )
         .bind(macaddr)
-        .fetch_one(&state.pool)
+        .fetch_one(pool)
         .await
         .context("unable to select by mac")
     }
 
-    pub async fn update(self, state: &crate::AppState) -> Result<Device> {
+    pub async fn update(self, pool: &MySqlPool) -> Result<Device> {
         let id = match self.id {
             Some(id) => id,
             None => return Err(anyhow!("selected device has no id")),
@@ -99,13 +99,13 @@ WHERE
         .bind(self.privacy as u8)
         .bind(&self.descr)
         .bind(id)
-        .execute(&state.pool)
+        .execute(pool)
         .await
         .context("unable to update")
         .and(Ok(self))
     }
 
-    pub async fn delete(self, state: &crate::AppState) -> Result<()> {
+    pub async fn delete(self, pool: &MySqlPool) -> Result<()> {
         let id = match self.id {
             Some(id) => id,
             None => return Err(anyhow!("selected device has no id")),
@@ -120,19 +120,47 @@ LIMIT 1
 ",
         )
         .bind(id)
-        .execute(&state.pool)
+        .execute(pool)
         .await
         .context("unable to delete")
         .and(Ok(()))
     }
+
+    pub async fn log(&self, pool: &MySqlPool, ip: &str) -> Result<()> {
+        let ip: Ipv4Addr = ip.parse().expect("unifi api returns always ips");
+
+        if !self.loggable() {
+            return Err(anyhow!("device should not be logged"));
+        }
+
+        sqlx::query("INSERT INTO alive_hosts (macaddr, iplong, erfda) VALUES (?, ?, NOW())")
+            .bind(&self.macaddr)
+            .bind(ip.to_bits().to_string())
+            .execute(pool)
+            .await
+            .context("unable to insert into db")?;
+        Ok(())
+    }
+
+    pub fn get_public_username(&self) -> String {
+        match self.privacy {
+            PrivacyLevel::ShowUserAndDevice => self.nickname.clone(),
+            PrivacyLevel::ShowUser => self.nickname.clone(),
+            PrivacyLevel::ShowAnonymous => "Anonymous".to_string(),
+            PrivacyLevel::HideUser => unreachable!("cannot get username for HideUser"),
+            PrivacyLevel::DontLog => unreachable!("cannot get username for DontLog"),
+        }
+    }
+
+    pub fn loggable(&self) -> bool {
+        match self.privacy {
+            PrivacyLevel::DontLog => false,
+            _ => true,
+        }
+    }
 }
 
-#[derive(sqlx::FromRow, Debug)]
-pub struct PrivacyLevelRow {
-    privacy: PrivacyLevel,
-}
-
-#[derive(sqlx::Type, Debug, Clone, Copy)]
+#[derive(sqlx::Type, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash)]
 #[repr(i8)]
 pub enum PrivacyLevel {
     ShowUserAndDevice = 0,
@@ -175,7 +203,7 @@ pub struct AliveDevice {
 }
 
 impl AliveDevice {
-    pub async fn unassinged(state: &crate::AppState) -> Result<Vec<AliveDevice>> {
+    pub async fn unassinged(pool: &MySqlPool) -> Result<Vec<AliveDevice>> {
         sqlx::query_as(
             "
 SELECT DISTINCT
@@ -196,42 +224,9 @@ ORDER BY
 ;
 ",
         )
-        .fetch_all(&state.pool)
+        .fetch_all(pool)
         .await
         .context("unable to load alive devices")
-    }
-
-    pub async fn loggable(&self, pool: &MySqlPool) -> Result<bool> {
-        let privacy: Result<Option<PrivacyLevelRow>> =
-            sqlx::query_as("SELECT privacy FROM mac_to_nick WHERE macaddr = ? LIMIT 1")
-                .bind(&self.macaddr)
-                .fetch_optional(pool)
-                .await
-                .context("unable to lookup device");
-        let should_log = match privacy?.ok_or(anyhow!("device not found"))?.privacy {
-            PrivacyLevel::DontLog => false,
-            _ => true,
-        };
-        return Ok(should_log);
-    }
-
-    pub async fn log(pool: &MySqlPool, macaddr: &str, ip: &Ipv4Addr) -> Result<Self> {
-        let device = AliveDevice {
-            macaddr: macaddr.to_string(),
-            iplong: ip.to_bits() as i32,
-        };
-
-        if !device.loggable(pool).await? {
-            return Err(anyhow!("device should not be logged"));
-        }
-
-        sqlx::query("INSERT INTO alive_hosts (macaddr, iplong, erfda) VALUES (?, ?, NOW())")
-            .bind(&device.macaddr)
-            .bind(&device.iplong.to_string())
-            .execute(pool)
-            .await
-            .context("unable to insert into db")?;
-        Ok(device)
     }
 
     pub fn ip(&self) -> Ipv4Addr {

@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use argh::FromArgs;
 use axum::extract::State;
 use axum::{
     Router,
@@ -7,8 +6,10 @@ use axum::{
     routing::{get, post},
 };
 use axum_messages::{Level, MessagesManagerLayer};
+use envconfig::Envconfig;
 use openssl_probe;
 use sqlx::MySqlPool;
+use std::time::Duration;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tower_sessions::{MemoryStore, SessionManagerLayer};
 
@@ -21,34 +22,46 @@ mod scan;
 mod templates;
 
 /// Configuration
-#[derive(FromArgs, Debug)]
+#[derive(Clone, Envconfig)]
 struct Config {
-    /// listen address
-    #[argh(option, default = "\"[::1]:8080\".to_string()")]
+    #[envconfig(from = "LISTEN", default = "[::1]:8080")]
     listen: String,
 
-    /// database dsn
-    #[argh(
-        option,
-        default = "\"mysql://administration:foosinn123@127.0.0.1/administration\".to_string()"
-    )]
+    #[envconfig(from = "DATABASE_DSN")]
     dsn: String,
 
-    /// unifi console hostname
-    #[argh(option)]
-    unifi_hostname: Option<String>,
+    #[envconfig(from = "UNIFI_HOSTNAME")]
+    unifi_hostname: String,
 
-    /// unifi console username
-    #[argh(option)]
-    unifi_username: Option<String>,
+    #[envconfig(from = "UNIFI_USERNAME")]
+    unifi_username: String,
 
-    /// unifi console password
-    #[argh(option)]
-    unifi_password: Option<String>,
+    #[envconfig(from = "UNIFI_PASSWORD")]
+    unifi_password: String,
 
-    /// scan
-    #[argh(switch)]
-    scan: bool,
+    #[envconfig(from = "MQTT_SPACE_STATUS_TOPIC", default = "sensor/space/status")]
+    mqtt_spacestatus_topic: String,
+
+    #[envconfig(
+        from = "MQTT_MEMBER_PRESENT_TOPIC",
+        default = "sensor/space/member/present"
+    )]
+    mqtt_member_present_topic: String,
+
+    #[envconfig(
+        from = "MQTT_MEMBER_NAMES_TOPIC",
+        default = "sensor/space/member/names"
+    )]
+    mqtt_member_names_topic: String,
+
+    #[envconfig(
+        from = "MQTT_MEMBER_DEVICE_COUNT_TOPIC",
+        default = "sensor/space/member/deviceCount"
+    )]
+    mqtt_member_device_count_topic: String,
+
+    #[envconfig(from = "MQTT_HOST")]
+    mqtt_host: String,
 }
 
 #[derive(Clone)]
@@ -64,19 +77,29 @@ type AppMessage = (Level, String);
 async fn main() -> Result<()> {
     openssl_probe::init_ssl_cert_env_vars();
 
-    let config: Config = argh::from_env();
+    let config = Config::init_from_env().context("unable to parse environment")?;
+
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_env("RUST_LOG"))
         .init();
 
-    if config.scan {
-        return scan::scan(config).await;
-    }
+    let job = tokio::spawn(async {
+        let config = Config::init_from_env()
+            .context("unable to parse environment")
+            .unwrap();
+        let scanner = scan::Scanner::new(&config);
+        let mut interval = tokio::time::interval(Duration::from_secs(60));
+        loop {
+            interval.tick().await;
+            if let Err(err) = scanner.scan().await {
+                tracing::error!("unable to scan for devices: {}", err);
+            };
+        }
+    });
 
     let pool = MySqlPool::connect(&config.dsn)
         .await
         .context("unable to open database connection")?;
-
     let session_store = MemoryStore::default();
     let session_layer = SessionManagerLayer::new(session_store).with_secure(false);
 
@@ -92,7 +115,10 @@ async fn main() -> Result<()> {
         .layer(from_extractor::<middleware::ForwardAuth>())
         .layer(TraceLayer::new_for_http());
 
+    tracing::info!("listening on {}", config.listen);
     let listener = tokio::net::TcpListener::bind(config.listen).await?;
     axum::serve(listener, app).await?;
+
+    job.await.expect("lock");
     Ok(())
 }

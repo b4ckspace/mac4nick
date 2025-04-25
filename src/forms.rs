@@ -44,7 +44,7 @@ impl ChangeForm {
             privacy,
             present: false,
         }
-        .create(state)
+        .create(&state.pool)
         .await;
         return match dbresult {
             Ok(_) => (
@@ -56,7 +56,7 @@ impl ChangeForm {
     }
 
     pub async fn update(self, state: &AppState) -> AppMessage {
-        let mut device = match db::Device::for_mac(state, &self.macaddr).await {
+        let mut device = match db::Device::for_mac(&state.pool, &self.macaddr).await {
             Ok(device) => device,
             Err(_) => {
                 return (
@@ -70,14 +70,14 @@ impl ChangeForm {
             Err(_) => return (Level::Error, "unable to parse privacy level".to_string()),
         };
         device.descr = self.descr;
-        match device.update(state).await {
+        match device.update(&state.pool).await {
             Ok(device) => (Level::Info, format!("updated device \"{}\"", device.descr)),
             Err(_) => (Level::Error, "unable to update device".to_string()),
         }
     }
 
     pub async fn delete(self, state: &AppState) -> AppMessage {
-        let device = match db::Device::for_mac(state, &self.macaddr).await {
+        let device = match db::Device::for_mac(&state.pool, &self.macaddr).await {
             Ok(device) => device,
             Err(_) => {
                 return (
@@ -87,7 +87,7 @@ impl ChangeForm {
             }
         };
         let descr = device.descr.clone();
-        match device.delete(state).await {
+        match device.delete(&state.pool).await {
             Ok(_) => (
                 Level::Info,
                 format!("device \"{}\" has been deleted", descr),
