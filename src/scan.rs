@@ -125,6 +125,8 @@ impl Scanner {
             device_count += 1;
             if let Err(err) = device.log(&pool, &discovered.ip.as_ref().unwrap()).await {
                 tracing::debug!("unable to log device {:?}: {:?}", discovered.mac, err);
+            } else {
+                tracing::debug!("logged a device ({}){:?}", discovered.mac, device.nickname)
             };
         }
 
