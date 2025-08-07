@@ -85,10 +85,10 @@ impl Scanner {
             .build()?;
         http_client
             .post(format!("https://{}/api/login", hostname))
-            .body(format!(
-                "{{\"username\": \"{}\", \"password\": \"{}\"}}",
-                self.config.unifi_username, self.config.unifi_password
-            ))
+            .json(&serde_json::json!({
+                "username": self.config.unifi_username,
+                "password": self.config.unifi_password
+            }))
             .send()
             .await?;
 
