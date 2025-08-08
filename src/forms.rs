@@ -22,16 +22,15 @@ pub struct ChangeForm {
 }
 
 impl ChangeForm {
-    pub async fn handle(self, state: &AppState) -> AppMessage {
+    pub async fn handle(self, state: &AppState, nickname: String) -> AppMessage {
         match self.action {
-            Action::Register => self.register(state).await,
+            Action::Register => self.register(state, nickname).await,
             Action::Update => self.update(state).await,
             Action::Delete => self.delete(state).await,
         }
     }
 
-    pub async fn register(self, state: &AppState) -> AppMessage {
-        let nickname = "foosinn";
+    pub async fn register(self, state: &AppState, nickname: String) -> AppMessage {
         let privacy = match db::PrivacyLevel::try_from(self.privacy) {
             Ok(privacy) => privacy,
             Err(_) => return (Level::Error, "unable to parse privacy level".to_string()),

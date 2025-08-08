@@ -44,9 +44,10 @@ pub async fn index(
 pub async fn change(
     State(state): AxumAppState,
     messages: Messages,
+    ForwardAuth(nickname): ForwardAuth,
     Form(form): Form<ChangeForm>,
 ) -> Result<impl IntoResponse, ()> {
-    let message = form.handle(&state).await;
+    let message = form.handle(&state, nickname).await;
     messages.push(message.0, message.1, None);
     Ok(Redirect::to("/"))
 }
