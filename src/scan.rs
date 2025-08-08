@@ -104,8 +104,15 @@ impl Scanner {
         for discovered in unifi_sta.data.iter().filter(|device| device.ip.is_some()) {
             let device = match db::Device::for_mac(&pool, &discovered.mac).await {
                 Ok(device) => device,
-                Err(err) => {
-                    tracing::debug!("unable to find device {:?}: {:?}", discovered.mac, err);
+                Err(_) => {
+                    if let Ok(alive) = db::AliveDevice::new(
+                        &discovered.mac,
+                        &discovered.ip.as_ref().expect("ip is already checked"),
+                    ) {
+                        if let Err(err) = alive.log(&pool).await {
+                            tracing::info!("unable to log device {:?} {:?}", discovered.mac, err)
+                        }
+                    }
                     continue;
                 }
             };

@@ -2,6 +2,7 @@ use anyhow::{Context, Result, anyhow};
 use sqlx::MySqlPool;
 use std::convert::TryFrom;
 use std::net::Ipv4Addr;
+use std::str::FromStr;
 
 #[derive(sqlx::FromRow, Debug, PartialEq, Eq, Hash)]
 pub struct Device {
@@ -203,6 +204,32 @@ pub struct AliveDevice {
 }
 
 impl AliveDevice {
+    pub fn new(macaddr: &str, ip: &str) -> Result<AliveDevice> {
+        let ip = Ipv4Addr::from_str(ip).context("unable to parse ip address")?;
+        Ok(AliveDevice {
+            macaddr: macaddr.to_string(),
+            iplong: ip.to_bits() as i32,
+        })
+    }
+
+    pub async fn log(&self, pool: &MySqlPool) -> Result<()> {
+        sqlx::query(
+            "
+INSERT
+INTO alive_hosts
+(macaddr, iplong, erfda)
+VALUES
+(?, ?, NOW())
+",
+        )
+        .bind(&self.macaddr)
+        .bind(&self.iplong)
+        .execute(pool)
+        .await
+        .context("unable to log device")
+        .and(Ok(()))
+    }
+
     pub async fn unassinged(pool: &MySqlPool) -> Result<Vec<AliveDevice>> {
         sqlx::query_as(
             "

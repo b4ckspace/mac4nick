@@ -8,9 +8,9 @@ edition = "2024"
 anyhow = "1.0"
 argh = "0.1"
 askama = { version = "0.14" }
+axum-extra = { version = "0.10", features = ["cookie"] }
 axum-messages = "0.8"
 axum = { version = "0.8", features = ["macros"] }
-axum-extra = { version = "0.10", features = ["cookie"] }
 chrono = "0.4"
 envconfig = "0.11"
 http = "1"
@@ -19,6 +19,7 @@ openssl = { version = "0.10", features = ["vendored"] }
 reqwest = { version = "0.12", features = ["json", "cookies"] }
 rumqttc = "0.24"
 serde = "1.0"
+serde_json = "1"
 sqlx = { version = "0.8", features = ["mysql", "chrono", "runtime-tokio"] }
 tokio = { version = "1.11", features = ["full"] }
 tower-http = { version = "0.6", features = ["fs", "trace"] }
