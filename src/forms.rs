@@ -45,13 +45,13 @@ impl ChangeForm {
         }
         .create(&state.pool)
         .await;
-        return match dbresult {
+        match dbresult {
             Ok(_) => (
                 Level::Info,
                 format!("assinged device \"{}\" to {}", &self.descr, &nickname),
             ),
             Err(_) => (Level::Error, "unable to create device".to_string()),
-        };
+        }
     }
 
     pub async fn update(self, state: &AppState) -> AppMessage {

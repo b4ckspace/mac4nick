@@ -7,7 +7,6 @@ use axum::{
 };
 use axum_messages::{Level, MessagesManagerLayer};
 use envconfig::Envconfig;
-use openssl_probe;
 use sqlx::MySqlPool;
 use std::time::Duration;
 use tower_http::{services::ServeDir, trace::TraceLayer};
@@ -75,7 +74,10 @@ type AppMessage = (Level, String);
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    openssl_probe::init_ssl_cert_env_vars();
+    // Safety: This is required to find the os certificates.
+    unsafe {
+        openssl_probe::init_openssl_env_vars();
+    }
 
     let config = Config::init_from_env().context("unable to parse environment")?;
 

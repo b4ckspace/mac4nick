@@ -48,12 +48,9 @@ impl Scanner {
 
         tokio::task::spawn(async move {
             loop {
-                match eventloop.poll().await {
-                    Err(err) => {
-                        tracing::error!("mqtt issue: {}", err)
-                    }
-                    _ => (),
-                };
+                if let Err(err) = eventloop.poll().await {
+                    tracing::error!("mqtt issue: {}", err)
+                }
             }
         });
         Self {
@@ -107,7 +104,7 @@ impl Scanner {
                 Err(_) => {
                     if let Ok(alive) = db::AliveDevice::new(
                         &discovered.mac,
-                        &discovered.ip.as_ref().expect("ip is already checked"),
+                        discovered.ip.as_ref().expect("ip is already checked"),
                     ) {
                         if let Err(err) = alive.log(&pool).await {
                             tracing::info!("unable to log device {:?} {:?}", discovered.mac, err)
@@ -130,7 +127,7 @@ impl Scanner {
             }
 
             device_count += 1;
-            if let Err(err) = device.log(&pool, &discovered.ip.as_ref().unwrap()).await {
+            if let Err(err) = device.log(&pool, discovered.ip.as_ref().unwrap()).await {
                 tracing::debug!("unable to log device {:?}: {:?}", discovered.mac, err);
             } else {
                 tracing::debug!("logged a device ({}): {}", discovered.mac, device.nickname)

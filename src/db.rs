@@ -16,7 +16,7 @@ pub struct Device {
 
 impl Device {
     pub async fn create(self, pool: &MySqlPool) -> Result<()> {
-        if let Some(_) = self.id {
+        if self.id.is_some() {
             return Err(anyhow!("device has already been created"));
         }
         sqlx::query(
@@ -154,10 +154,7 @@ LIMIT 1
     }
 
     pub fn loggable(&self) -> bool {
-        match self.privacy {
-            PrivacyLevel::DontLog => false,
-            _ => true,
-        }
+        !matches!(self.privacy, PrivacyLevel::DontLog)
     }
 }
 
@@ -223,7 +220,7 @@ VALUES
 ",
         )
         .bind(&self.macaddr)
-        .bind(&self.iplong)
+        .bind(self.iplong)
         .execute(pool)
         .await
         .context("unable to log device")
