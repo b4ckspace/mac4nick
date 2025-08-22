@@ -29,6 +29,9 @@ struct Config {
     #[envconfig(from = "DATABASE_DSN")]
     dsn: String,
 
+    #[envconfig(from = "ALLOWED_SUBNETS", default = "0.0.0.0/0")]
+    allowed_subnets: String,
+
     #[envconfig(from = "UNIFI_HOSTNAME")]
     unifi_hostname: String,
 
@@ -85,7 +88,7 @@ async fn main() -> Result<()> {
         .with_env_filter(tracing_subscriber::EnvFilter::from_env("RUST_LOG"))
         .init();
 
-    let job = tokio::spawn(async {
+    let job = tokio::spawn(async move {
         let config = Config::init_from_env()
             .context("unable to parse environment")
             .unwrap();

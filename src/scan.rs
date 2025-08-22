@@ -1,8 +1,10 @@
 use anyhow::{Context, Result};
+use ipnetwork::IpNetwork;
 use rumqttc::{AsyncClient, MqttOptions, QoS};
 use serde::Deserialize;
 use sqlx::MySqlPool;
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::time::Duration;
 
 use crate::db;
@@ -35,8 +37,10 @@ impl From<&db::Device> for User {
 
 #[derive(Clone)]
 pub(crate) struct Scanner {
-    client: AsyncClient,
     config: crate::Config,
+
+    client: AsyncClient,
+    allowed_subnets: Vec<IpNetwork>,
 }
 
 impl Scanner {
@@ -53,9 +57,24 @@ impl Scanner {
                 }
             }
         });
+
+        let allowed_subnets: Vec<IpNetwork> = config
+            .allowed_subnets
+            .split(',')
+            .filter_map(|s| {
+                let trimmed = s.trim();
+                let parsed = IpNetwork::from_str(trimmed);
+                if let Err(e) = &parsed {
+                    tracing::error!("Error parsing subnet '{}': {}", trimmed, e);
+                }
+                parsed.ok()
+            })
+            .collect();
+
         Self {
             client,
             config: config.clone(),
+            allowed_subnets,
         }
     }
 
@@ -98,7 +117,22 @@ impl Scanner {
         let mut device_count = 0_u64;
 
         let unifi_sta = resp.json::<UnifiStaResponse>().await?;
-        for discovered in unifi_sta.data.iter().filter(|device| device.ip.is_some()) {
+
+        for discovered in unifi_sta
+            .data
+            .iter()
+            .filter(|device| device.ip.is_some())
+            .filter(|device| {
+                self.allowed_subnets.iter().any(|subnet| {
+                    if let Some(ip_str) = &device.ip {
+                        if let Ok(ip) = ip_str.parse::<std::net::IpAddr>() {
+                            return subnet.contains(ip);
+                        }
+                    }
+                    false
+                })
+            })
+        {
             let device = match db::Device::for_mac(&pool, &discovered.mac).await {
                 Ok(device) => device,
                 Err(_) => {
